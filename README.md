@@ -1,32 +1,28 @@
-# 🚀 ResuGemma 4 — ATS Resume Parser & Optimizer
+# ResuGemma — ATS Resume Parser & Personalized Cover Letter Generator
 
-An intelligent **Applicant Tracking System (ATS) Resume Parser & Tailor** powered by **Google Gemma 4** running locally via the **Ollama API**, formatted using the industry-standard **Jake's Resume Template**.
+A minimalist, high-precision **Applicant Tracking System (ATS) Resume Parser & Tailor** powered by **Google Gemma 4** via local **Ollama API**, styled in a distraction-free **Black & White editorial design** and formatting resumes to **Jake's Resume Template**.
 
 ---
 
-## ✨ Features
+## Features
 
-- **Multi-Format Resume Ingestion**: Upload resumes in `.pdf`, `.docx`, `.doc`, or `.txt` formats, with automatic text and structure extraction.
-- **Powered by Local Gemma 4 via Ollama**: Runs zero-data-leak local inference using your local Ollama daemon (`gemma4:latest`).
-- **Job Description (JD) Tailoring**:
-  - Paste any target Job Description (or use built-in presets).
-  - Gemma 4 rewrites bullet points with impactful action verbs and quantified metrics (e.g. `Spearheaded... resulting in 35% improvement`).
-  - Seamlessly weaves target technical skills and keywords into experience and project bullets.
+- **Multi-Format Resume Ingestion**: Upload resumes in `.pdf`, `.docx`, `.doc`, or `.txt` formats with automatic text extraction.
+- **Personalized Cover Letter Generator**: Generates a tailored executive cover letter aligning the candidate's quantified achievements with the target company and role.
+- **Minimalist Black & White Design**: Replaces generic AI-style neon/purple gradients with a clean, editorial monochrome design system (Swiss typography, crisp 1px borders, solid black action buttons).
+- **Target Job Description Tailoring**:
+  - Aligns bullet points with strong action verbs and bolded metrics (`**15M requests/day**`).
+  - Automatically incorporates keywords and core competencies from the target posting.
 - **Jake's Resume Template (Gold Standard for ATS)**:
-  - Emulates Jake Gutierrez's famous single-column LaTeX resume layout.
-  - Live interactive preview with authentic Computer Modern typography.
-  - Generates 100% compile-ready `.tex` code compatible with Overleaf and `pdflatex`.
-- **ATS Match Scorecard & Analytics**:
-  - Real-time ATS match rating (0–100%).
-  - Matched keywords (highlighted in emerald checkmarks).
-  - Missing keywords from JD with suggestions for incorporation.
-  - Actionable ATS tips to pass employer screening algorithms (Workday, Greenhouse, Lever, Taleo).
-- **Multiple Export Options**:
-  - **Print / PDF**: Pixel-perfect printable document via `@media print`.
-  - **LaTeX (.tex)**: Authentic Jake's resume source code download.
-  - **Markdown (.md)**: Clean markdown export.
-  - **JSON**: Structured candidate data.
-  - **Inline Edit Mode**: Click directly on any text in the live resume to tweak wording before exporting.
+  - Single-column LaTeX layout optimized for screen readers and enterprise ATS parsers (Workday, Greenhouse, Lever).
+  - Live interactive preview and downloadable `.tex` source code.
+- **ATS Match Scorecard**:
+  - Match percentage score.
+  - Matched keywords vs. missing keywords breakdown.
+- **Export & Inline Edit**:
+  - **Cover Letter & Resume Switcher**: Switch between documents with one click.
+  - **Inline Edit Mode**: Click any paragraph or bullet point to edit before printing.
+  - **Print / PDF**: Clean print preview formatted via `@media print`.
+  - **Export to LaTeX (.tex), Markdown (.md), and JSON**.
 
 ---
 

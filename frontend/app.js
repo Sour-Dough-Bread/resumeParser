@@ -1,30 +1,30 @@
 /**
- * ResuGemma 4 — ATS Resume Tailor Frontend Logic
- * Integrates local Gemma 4 via Ollama with Jake's Resume Template
+ * Resume Tailor & Cover Letter Generator
+ * Minimalist Black & White UI Logic
  */
 
 // Application State
 const state = {
     currentResumeData: null,
+    currentCoverLetter: null,
     currentLatex: "",
     currentMarkdown: "",
     isEditMode: false,
     activeTab: "jake",
     sampleData: null,
-    isProcessing: false
+    isProcessing: false,
+    isGeneratingCover: false
 };
 
-// DOM Elements
+// DOM References
 const elements = {
-    // Status & Header
+    // Header
     ollamaStatusText: document.getElementById("ollamaStatusText"),
-    activeModelName: document.getElementById("activeModelName"),
+    statusDot: document.getElementById("statusDot"),
+    activeModelTag: document.getElementById("activeModelTag"),
     quickSampleBtn: document.getElementById("quickSampleBtn"),
-    modelSelect: document.getElementById("modelSelect"),
-    temperatureSlider: document.getElementById("temperatureSlider"),
-    tempValue: document.getElementById("tempValue"),
 
-    // Step 1: Upload & Text
+    // Left Panel - Step 1: Upload
     tabUploadBtn: document.getElementById("tabUploadBtn"),
     tabTextBtn: document.getElementById("tabTextBtn"),
     dropzoneArea: document.getElementById("dropzoneArea"),
@@ -42,27 +42,32 @@ const elements = {
     sampleJdAiBtn: document.getElementById("sampleJdAiBtn"),
     sampleJdBackendBtn: document.getElementById("sampleJdBackendBtn"),
 
-    // Step 3: Process Button & Status
+    // Step 3: Controls
+    modelSelect: document.getElementById("modelSelect"),
+    temperatureSlider: document.getElementById("temperatureSlider"),
+    tempValue: document.getElementById("tempValue"),
     processBtn: document.getElementById("processBtn"),
     processBtnText: document.getElementById("processBtnText"),
     processSpinner: document.getElementById("processSpinner"),
+    generateCoverLetterBtn: document.getElementById("generateCoverLetterBtn"),
+    coverLetterBtnText: document.getElementById("coverLetterBtnText"),
+    coverSpinner: document.getElementById("coverSpinner"),
     aiStatusBar: document.getElementById("aiStatusBar"),
     aiStatusMessage: document.getElementById("aiStatusMessage"),
 
-    // Step 4: ATS Analytics Card
+    // Step 4: ATS Scorecard
     atsAnalyticsCard: document.getElementById("atsAnalyticsCard"),
-    atsScoreValue: document.getElementById("atsScoreValue"),
-    atsScoreProgressBar: document.getElementById("atsScoreProgressBar"),
     atsRatingBadge: document.getElementById("atsRatingBadge"),
-    atsSummaryText: document.getElementById("atsSummaryText"),
+    atsScoreProgressBar: document.getElementById("atsScoreProgressBar"),
     matchedCount: document.getElementById("matchedCount"),
     matchedKeywordsList: document.getElementById("matchedKeywordsList"),
     missingCount: document.getElementById("missingCount"),
     missingKeywordsList: document.getElementById("missingKeywordsList"),
-    atsTipsList: document.getElementById("atsTipsList"),
+    atsSummaryText: document.getElementById("atsSummaryText"),
 
-    // Right Panel: Tabs & Actions
+    // Right Panel - Tabs & Actions
     viewJakeBtn: document.getElementById("viewJakeBtn"),
+    viewCoverBtn: document.getElementById("viewCoverBtn"),
     viewLatexBtn: document.getElementById("viewLatexBtn"),
     viewMarkdownBtn: document.getElementById("viewMarkdownBtn"),
     viewJsonBtn: document.getElementById("viewJsonBtn"),
@@ -71,8 +76,9 @@ const elements = {
     printPdfBtn: document.getElementById("printPdfBtn"),
     downloadLatexBtn: document.getElementById("downloadLatexBtn"),
 
-    // Views
+    // Viewports
     jakeResumePaper: document.getElementById("jakeResumePaper"),
+    coverLetterPaper: document.getElementById("coverLetterPaper"),
     latexCodeView: document.getElementById("latexCodeView"),
     latexCodeContent: document.getElementById("latexCodeContent"),
     copyLatexBtn: document.getElementById("copyLatexBtn"),
@@ -86,7 +92,7 @@ const elements = {
     toastContainer: document.getElementById("toastContainer")
 };
 
-// Initialization
+// Initialize
 document.addEventListener("DOMContentLoaded", () => {
     initApp();
     setupEventListeners();
@@ -97,7 +103,7 @@ async function initApp() {
     loadSamples();
 }
 
-// Check Ollama status and list models
+// Check Ollama status
 async function checkOllamaAndModels() {
     try {
         const res = await fetch("/api/models");
@@ -105,9 +111,8 @@ async function checkOllamaAndModels() {
 
         if (data.ollama_online) {
             elements.ollamaStatusText.textContent = "Ollama Connected";
-            elements.ollamaStatusText.parentElement.style.borderColor = "rgba(16, 185, 129, 0.4)";
+            elements.statusDot.style.backgroundColor = "#18181b"; // Minimal black dot
 
-            // Populate model options
             elements.modelSelect.innerHTML = "";
             let foundGemma = false;
             
@@ -123,31 +128,30 @@ async function checkOllamaAndModels() {
             });
 
             if (!foundGemma && data.models.length > 0) {
-                // If gemma4 wasn't in list, add it as default choice
                 const gemmaOpt = document.createElement("option");
                 gemmaOpt.value = "gemma4:latest";
-                gemmaOpt.textContent = "gemma4:latest (Default)";
+                gemmaOpt.textContent = "gemma4:latest";
                 gemmaOpt.selected = true;
                 elements.modelSelect.prepend(gemmaOpt);
             }
 
-            elements.activeModelName.textContent = elements.modelSelect.value || "gemma4:latest";
+            elements.activeModelTag.textContent = elements.modelSelect.value || "gemma4:latest";
         } else {
-            elements.ollamaStatusText.textContent = "Ollama Offline (Start Ollama)";
-            elements.ollamaStatusText.parentElement.style.borderColor = "rgba(239, 68, 68, 0.5)";
+            elements.ollamaStatusText.textContent = "Ollama Offline";
+            elements.statusDot.style.backgroundColor = "#dc2626";
         }
     } catch (err) {
-        elements.ollamaStatusText.textContent = "Backend Offline";
+        elements.ollamaStatusText.textContent = "Server Offline";
     }
 }
 
-// Pre-load sample resume and JD
+// Load sample presets
 async function loadSamples() {
     try {
         const res = await fetch("/api/samples");
         state.sampleData = await res.json();
     } catch (err) {
-        console.warn("Could not load sample presets", err);
+        console.warn("Could not load sample data", err);
     }
 }
 
@@ -160,10 +164,10 @@ function setupEventListeners() {
 
     // Model Change
     elements.modelSelect.addEventListener("change", (e) => {
-        elements.activeModelName.textContent = e.target.value;
+        elements.activeModelTag.textContent = e.target.value;
     });
 
-    // Tab toggle: Upload vs Raw Text
+    // Upload vs Text tab toggle
     elements.tabUploadBtn.addEventListener("click", () => {
         elements.tabUploadBtn.classList.add("active");
         elements.tabTextBtn.classList.remove("active");
@@ -178,7 +182,7 @@ function setupEventListeners() {
         elements.rawTextInputArea.classList.remove("hidden");
     });
 
-    // Dropzone interactions
+    // Dropzone
     elements.dropzoneArea.addEventListener("click", () => elements.resumeFileInput.click());
 
     elements.dropzoneArea.addEventListener("dragover", (e) => {
@@ -210,7 +214,7 @@ function setupEventListeners() {
         elements.fileInfoBanner.classList.add("hidden");
         elements.dropzoneArea.classList.remove("hidden");
         elements.resumeRawText.value = "";
-        showToast("File removed", "info");
+        showToast("File removed");
     });
 
     // Quick samples
@@ -222,22 +226,24 @@ function setupEventListeners() {
     elements.sampleJdAiBtn.addEventListener("click", () => {
         if (state.sampleData && state.sampleData.job_descriptions.ai_fullstack) {
             elements.jobDescriptionText.value = state.sampleData.job_descriptions.ai_fullstack.description.trim();
-            showToast("Loaded AI/Full-Stack Job Description", "success");
+            showToast("Loaded AI/Full-Stack Job Description");
         }
     });
 
     elements.sampleJdBackendBtn.addEventListener("click", () => {
         if (state.sampleData && state.sampleData.job_descriptions.backend_systems) {
             elements.jobDescriptionText.value = state.sampleData.job_descriptions.backend_systems.description.trim();
-            showToast("Loaded Backend Systems Job Description", "success");
+            showToast("Loaded Backend Job Description");
         }
     });
 
-    // Process button
+    // Actions
     elements.processBtn.addEventListener("click", processResume);
+    elements.generateCoverLetterBtn.addEventListener("click", generateCoverLetterStandalone);
 
-    // View switcher tabs
+    // View tabs
     elements.viewJakeBtn.addEventListener("click", () => switchView("jake"));
+    elements.viewCoverBtn.addEventListener("click", () => switchView("cover"));
     elements.viewLatexBtn.addEventListener("click", () => switchView("latex"));
     elements.viewMarkdownBtn.addEventListener("click", () => switchView("markdown"));
     elements.viewJsonBtn.addEventListener("click", () => switchView("json"));
@@ -245,10 +251,10 @@ function setupEventListeners() {
     // Inline edit toggle
     elements.toggleEditBtn.addEventListener("click", toggleInlineEdit);
 
-    // Export actions
+    // Print / Export
     elements.printPdfBtn.addEventListener("click", () => {
-        if (!state.currentResumeData) {
-            showToast("Please parse or load a resume first", "error");
+        if (!state.currentResumeData && !state.currentCoverLetter) {
+            showToast("Please generate or load content first");
             return;
         }
         window.print();
@@ -257,9 +263,9 @@ function setupEventListeners() {
     elements.downloadLatexBtn.addEventListener("click", downloadLatexFile);
 
     // Copy buttons
-    elements.copyLatexBtn.addEventListener("click", () => copyToClipboard(state.currentLatex, "LaTeX code copied!"));
-    elements.copyMdBtn.addEventListener("click", () => copyToClipboard(state.currentMarkdown, "Markdown copied!"));
-    elements.copyJsonBtn.addEventListener("click", () => copyToClipboard(JSON.stringify(state.currentResumeData, null, 2), "JSON copied!"));
+    elements.copyLatexBtn.addEventListener("click", () => copyToClipboard(state.currentLatex, "LaTeX copied"));
+    elements.copyMdBtn.addEventListener("click", () => copyToClipboard(state.currentMarkdown, "Markdown copied"));
+    elements.copyJsonBtn.addEventListener("click", () => copyToClipboard(JSON.stringify(state.currentResumeData, null, 2), "JSON copied"));
 }
 
 // Handle File Upload
@@ -281,59 +287,55 @@ async function handleFileUpload(file) {
             throw new Error(data.detail || "Upload failed");
         }
 
-        // Show banner
         elements.dropzoneArea.classList.add("hidden");
         elements.fileInfoBanner.classList.remove("hidden");
         elements.fileNameText.textContent = file.name;
         elements.fileTypeBadge.textContent = file.name.split('.').pop().toUpperCase();
         
-        const charCount = (data.raw_text || "").length;
-        elements.fileMetaText.textContent = `Type: ${data.metadata.type || 'Doc'} | Characters: ${charCount.toLocaleString()}`;
-        
-        // Populate raw text input
+        const count = data.metadata.pages || data.metadata.elements || 1;
+        elements.fileMetaText.textContent = `${count} ${data.metadata.type === 'pdf' ? 'pages' : 'elements'}`;
         elements.resumeRawText.value = data.raw_text;
 
         elements.aiStatusBar.classList.add("hidden");
-        showToast(`Successfully extracted ${file.name}!`, "success");
+        showToast(`Uploaded ${file.name}`);
     } catch (err) {
         elements.aiStatusBar.classList.add("hidden");
-        showToast(err.message, "error");
+        showToast(err.message);
     }
 }
 
-// Apply Sample Data for Instant Testing
+// Apply Sample Data
 function applyFullSample() {
     if (!state.sampleData) return;
 
     elements.resumeRawText.value = state.sampleData.sample_resume;
-    elements.tabTextBtn.click(); // Switch to text view so user can inspect it
+    elements.tabTextBtn.click();
 
     if (state.sampleData.job_descriptions && state.sampleData.job_descriptions.ai_fullstack) {
         elements.jobDescriptionText.value = state.sampleData.job_descriptions.ai_fullstack.description.trim();
     }
 
-    showToast("Sample Resume & AI Job Description Loaded!", "success");
+    showToast("Loaded sample resume & job description");
 }
 
-// Core Process Function: Gemma 4 via Ollama
+// Tailor Resume Pipeline
 async function processResume() {
     const resumeText = elements.resumeRawText.value.trim();
     const jobDescription = elements.jobDescriptionText.value.trim();
 
     if (!resumeText) {
-        showToast("Please upload a resume or paste resume text first.", "error");
+        showToast("Please upload a resume or paste text first.");
         elements.tabTextBtn.click();
         elements.resumeRawText.focus();
         return;
     }
 
-    // Set UI loading state
     state.isProcessing = true;
     elements.processBtn.disabled = true;
-    elements.processBtnText.textContent = "Gemma 4 is Reasoning & Tailoring...";
+    elements.processBtnText.textContent = "Analyzing & Tailoring...";
     elements.processSpinner.classList.remove("hidden");
     elements.aiStatusBar.classList.remove("hidden");
-    elements.aiStatusMessage.textContent = "Analyzing candidate experience and aligning with Job Description keywords...";
+    elements.aiStatusMessage.textContent = "Gemma 4 is structuring resume to Jake's format...";
 
     try {
         const payload = {
@@ -356,41 +358,96 @@ async function processResume() {
 
         // Store state
         state.currentResumeData = data.resume;
+        state.currentCoverLetter = data.cover_letter;
         state.currentLatex = data.latex;
         state.currentMarkdown = data.markdown;
 
-        // Render Jake's Resume Live HTML
+        // Render Resume
         renderJakesResume(data.resume);
 
-        // Render Code Views
+        // Render Cover Letter
+        if (data.cover_letter) {
+            renderCoverLetter(data.cover_letter);
+        }
+
+        // Render Code Panels
         elements.latexCodeContent.textContent = data.latex;
         elements.markdownCodeContent.textContent = data.markdown;
         elements.jsonCodeContent.textContent = JSON.stringify(data.resume, null, 2);
 
-        // Render ATS Analytics Scorecard
+        // Render Minimal ATS Scorecard
         renderAtsAnalytics(data.ats_analysis);
 
-        // Switch to Jake's resume view
         switchView("jake");
-
-        showToast("Resume successfully parsed & tailored to Jake's standard!", "success");
+        showToast("Resume tailored to Jake's template");
     } catch (err) {
-        showToast(`Processing error: ${err.message}`, "error");
+        showToast(`Error: ${err.message}`);
     } finally {
         state.isProcessing = false;
         elements.processBtn.disabled = false;
-        elements.processBtnText.textContent = "Parse & Tailor with Gemma 4";
+        elements.processBtnText.textContent = "Tailor Resume (Jake's Format)";
         elements.processSpinner.classList.add("hidden");
         elements.aiStatusBar.classList.add("hidden");
     }
 }
 
-// Render Jake's Resume HTML Representation
+// Generate Standalone Cover Letter
+async function generateCoverLetterStandalone() {
+    const resumeText = elements.resumeRawText.value.trim();
+    const jobDescription = elements.jobDescriptionText.value.trim();
+
+    if (!resumeText) {
+        showToast("Please provide resume text first.");
+        elements.tabTextBtn.click();
+        return;
+    }
+
+    state.isGeneratingCover = true;
+    elements.generateCoverLetterBtn.disabled = true;
+    elements.coverLetterBtnText.textContent = "Writing Cover Letter...";
+    elements.coverSpinner.classList.remove("hidden");
+    elements.aiStatusBar.classList.remove("hidden");
+    elements.aiStatusMessage.textContent = "Gemma 4 is drafting personalized cover letter...";
+
+    try {
+        const payload = {
+            resume_text: resumeText,
+            job_description: jobDescription,
+            model: elements.modelSelect.value || "gemma4:latest",
+            candidate_data: state.currentResumeData
+        };
+
+        const res = await fetch("/api/cover-letter", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.detail || "Failed to generate cover letter");
+        }
+
+        state.currentCoverLetter = data;
+        renderCoverLetter(data);
+        switchView("cover");
+        showToast("Personalized cover letter generated");
+    } catch (err) {
+        showToast(`Cover letter error: ${err.message}`);
+    } finally {
+        state.isGeneratingCover = false;
+        elements.generateCoverLetterBtn.disabled = false;
+        elements.coverLetterBtnText.textContent = "Generate Cover Letter";
+        elements.coverSpinner.classList.add("hidden");
+        elements.aiStatusBar.classList.add("hidden");
+    }
+}
+
+// Render Jake's Resume HTML
 function renderJakesResume(data) {
     const contact = data.contact || {};
     const name = contact.name || "Candidate Name";
     
-    // Contact Bar
     const contactParts = [];
     if (contact.phone) contactParts.push(`<span>${escapeHtml(contact.phone)}</span>`);
     if (contact.email) contactParts.push(`<a href="mailto:${escapeHtml(contact.email)}">${escapeHtml(contact.email)}</a>`);
@@ -419,7 +476,7 @@ function renderJakesResume(data) {
         </header>
     `;
 
-    // Summary (Optional ATS Boost)
+    // Summary
     if (data.summary && data.summary.trim()) {
         html += `
             <section class="jake-section">
@@ -429,7 +486,7 @@ function renderJakesResume(data) {
         `;
     }
 
-    // Education Section
+    // Education
     if (data.education && data.education.length > 0) {
         html += `
             <section class="jake-section">
@@ -462,7 +519,7 @@ function renderJakesResume(data) {
         html += `</section>`;
     }
 
-    // Experience Section
+    // Experience
     if (data.experience && data.experience.length > 0) {
         html += `
             <section class="jake-section">
@@ -498,7 +555,7 @@ function renderJakesResume(data) {
         html += `</section>`;
     }
 
-    // Projects Section
+    // Projects
     if (data.projects && data.projects.length > 0) {
         html += `
             <section class="jake-section">
@@ -531,7 +588,7 @@ function renderJakesResume(data) {
         html += `</section>`;
     }
 
-    // Technical Skills Section
+    // Skills
     if (data.skills && Object.keys(data.skills).length > 0) {
         html += `
             <section class="jake-section">
@@ -540,12 +597,7 @@ function renderJakesResume(data) {
         `;
         for (const [cat, items] of Object.entries(data.skills)) {
             const catName = escapeHtml(cat.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()));
-            let itemsStr = "";
-            if (Array.isArray(items)) {
-                itemsStr = items.map(escapeHtml).join(", ");
-            } else {
-                itemsStr = escapeHtml(String(items));
-            }
+            let itemsStr = Array.isArray(items) ? items.map(escapeHtml).join(", ") : escapeHtml(String(items));
             if (itemsStr.trim()) {
                 html += `<li contenteditable="${state.isEditMode}"><strong>${catName}:</strong> ${itemsStr}</li>`;
             }
@@ -556,75 +608,99 @@ function renderJakesResume(data) {
         `;
     }
 
-    // Certifications Section (if any)
-    if (data.certifications && data.certifications.length > 0) {
-        html += `
-            <section class="jake-section">
-                <div class="jake-section-title">Certifications</div>
-                <ul class="jake-skills-list">
-        `;
-        data.certifications.forEach(c => {
-            if (typeof c === "object") {
-                const cName = escapeHtml(c.name || "");
-                const cIssuer = c.issuer ? ` — ${escapeHtml(c.issuer)}` : "";
-                const cDate = c.date ? ` (${escapeHtml(c.date)})` : "";
-                html += `<li contenteditable="${state.isEditMode}"><strong>${cName}</strong>${cIssuer}${cDate}</li>`;
-            } else {
-                html += `<li contenteditable="${state.isEditMode}">${escapeHtml(String(c))}</li>`;
-            }
-        });
-        html += `
-                </ul>
-            </section>
-        `;
-    }
-
     elements.jakeResumePaper.innerHTML = html;
 }
 
-// Render ATS Analytics Scorecard
+// Render Professional Cover Letter
+function renderCoverLetter(letterData) {
+    const contact = state.currentResumeData?.contact || {};
+    const name = letterData.candidate_name || contact.name || "Candidate Name";
+    const email = contact.email || "candidate@email.com";
+    const phone = contact.phone || "(555) 012-3456";
+    const location = contact.location || "San Francisco, CA";
+    const company = letterData.company || "Hiring Team";
+
+    // Format current date e.g. "October 24, 2026"
+    const today = new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+
+    const rawBody = letterData.cover_letter || "";
+    // Break into paragraphs
+    const paragraphs = rawBody.split(/\n\n+/).filter(p => p.trim());
+
+    // Format paragraphs HTML
+    const bodyHtml = paragraphs.map(p => {
+        // Skip leading greeting or trailing signoff if embedded in paragraphs
+        if (p.toLowerCase().startsWith("dear ") || p.toLowerCase().startsWith("sincerely")) {
+            return `<p contenteditable="${state.isEditMode}"><em>${escapeHtml(p)}</em></p>`;
+        }
+        return `<p contenteditable="${state.isEditMode}">${escapeHtml(p)}</p>`;
+    }).join("");
+
+    const html = `
+        <div class="cl-header">
+            <h1 contenteditable="${state.isEditMode}">${escapeHtml(name)}</h1>
+            <div class="cl-contact-sub" contenteditable="${state.isEditMode}">
+                ${escapeHtml(location)} &bull; ${escapeHtml(phone)} &bull; ${escapeHtml(email)}
+            </div>
+        </div>
+
+        <div class="cl-date" contenteditable="${state.isEditMode}">${today}</div>
+
+        <div class="cl-recipient-block" contenteditable="${state.isEditMode}">
+            <strong>Hiring Team</strong><br>
+            ${escapeHtml(company)}
+        </div>
+
+        <div class="cl-body">
+            ${bodyHtml}
+        </div>
+
+        <div class="cl-signoff" contenteditable="${state.isEditMode}">
+            Sincerely,<br>
+            <div class="name">${escapeHtml(name)}</div>
+        </div>
+    `;
+
+    elements.coverLetterPaper.innerHTML = html;
+}
+
+// Render Minimal ATS Scorecard
 function renderAtsAnalytics(analysis) {
     if (!analysis) return;
 
     elements.atsAnalyticsCard.classList.remove("hidden");
 
     const score = analysis.score || 85;
-    elements.atsScoreValue.textContent = score;
+    elements.atsRatingBadge.textContent = `${score}% MATCH`;
     elements.atsScoreProgressBar.style.width = `${score}%`;
-    elements.atsRatingBadge.textContent = analysis.rating || `${score}% Match`;
 
-    elements.atsSummaryText.textContent = analysis.tailoring_summary || "Optimized against target JD using Gemma 4.";
+    elements.atsSummaryText.textContent = analysis.tailoring_summary || "Aligned against target job description.";
 
-    // Matched Keywords
     const matched = analysis.matched_keywords || [];
     elements.matchedCount.textContent = matched.length;
     elements.matchedKeywordsList.innerHTML = matched.map(kw => 
-        `<span class="kw-tag matched">✓ ${escapeHtml(kw)}</span>`
+        `<span class="minimal-tag matched">${escapeHtml(kw)}</span>`
     ).join("");
 
-    // Missing Keywords
     const missing = analysis.missing_keywords || [];
     elements.missingCount.textContent = missing.length;
     elements.missingKeywordsList.innerHTML = missing.map(kw => 
-        `<span class="kw-tag missing">+ ${escapeHtml(kw)}</span>`
-    ).join("");
-
-    // Tips
-    const tips = analysis.actionable_tips || ["Ensure single-column layout for ATS parser readability."];
-    elements.atsTipsList.innerHTML = tips.map(tip => 
-        `<li>${escapeHtml(tip)}</li>`
+        `<span class="minimal-tag missing">+ ${escapeHtml(kw)}</span>`
     ).join("");
 }
 
-// Switch between Jake's Preview, LaTeX, Markdown, JSON
+// Switch Views
 function switchView(viewName) {
     state.activeTab = viewName;
 
-    // Reset active buttons
-    [elements.viewJakeBtn, elements.viewLatexBtn, elements.viewMarkdownBtn, elements.viewJsonBtn].forEach(b => b.classList.remove("active"));
+    [elements.viewJakeBtn, elements.viewCoverBtn, elements.viewLatexBtn, elements.viewMarkdownBtn, elements.viewJsonBtn].forEach(b => b.classList.remove("active"));
     
-    // Hide all view containers
     elements.jakeResumePaper.classList.add("hidden");
+    elements.coverLetterPaper.classList.add("hidden");
     elements.latexCodeView.classList.add("hidden");
     elements.markdownCodeView.classList.add("hidden");
     elements.jsonCodeView.classList.add("hidden");
@@ -632,6 +708,9 @@ function switchView(viewName) {
     if (viewName === "jake") {
         elements.viewJakeBtn.classList.add("active");
         elements.jakeResumePaper.classList.remove("hidden");
+    } else if (viewName === "cover") {
+        elements.viewCoverBtn.classList.add("active");
+        elements.coverLetterPaper.classList.remove("hidden");
     } else if (viewName === "latex") {
         elements.viewLatexBtn.classList.add("active");
         elements.latexCodeView.classList.remove("hidden");
@@ -646,30 +725,22 @@ function switchView(viewName) {
 
 // Inline Edit Mode Toggle
 function toggleInlineEdit() {
-    if (!state.currentResumeData) {
-        showToast("Generate or load a resume first", "error");
-        return;
-    }
-
     state.isEditMode = !state.isEditMode;
     elements.jakeResumePaper.classList.toggle("editable-active", state.isEditMode);
+    elements.coverLetterPaper.classList.toggle("editable-active", state.isEditMode);
     elements.toggleEditBtn.classList.toggle("active", state.isEditMode);
-    elements.editBtnText.textContent = state.isEditMode ? "Editing Active" : "Edit Mode";
+    elements.editBtnText.textContent = state.isEditMode ? "Done Editing" : "Edit Mode";
 
-    const editables = elements.jakeResumePaper.querySelectorAll("[contenteditable]");
+    const editables = document.querySelectorAll(".jake-resume-container [contenteditable]");
     editables.forEach(el => el.setAttribute("contenteditable", state.isEditMode ? "true" : "false"));
 
-    if (state.isEditMode) {
-        showToast("Inline Edit Enabled: Click any text to edit directly!", "info");
-    } else {
-        showToast("Inline Edit Disabled", "info");
-    }
+    showToast(state.isEditMode ? "Edit Mode Enabled: Click text to edit" : "Edit Mode Disabled");
 }
 
-// Download LaTeX File
+// Download LaTeX
 function downloadLatexFile() {
     if (!state.currentLatex) {
-        showToast("Please generate a resume first", "error");
+        showToast("Generate a resume first");
         return;
     }
 
@@ -688,44 +759,39 @@ function downloadLatexFile() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    showToast(`Downloaded ${filename}`, "success");
+    showToast(`Saved ${filename}`);
 }
 
 // Copy helper
 async function copyToClipboard(text, successMsg) {
     if (!text) {
-        showToast("Nothing to copy yet", "error");
+        showToast("Nothing to copy");
         return;
     }
     try {
         await navigator.clipboard.writeText(text);
-        showToast(successMsg, "success");
+        showToast(successMsg);
     } catch (err) {
-        showToast("Clipboard copy failed", "error");
+        showToast("Copy failed");
     }
 }
 
-// Toast notification helper
-function showToast(message, type = "info") {
+// Toast notification
+function showToast(message) {
     const toast = document.createElement("div");
-    toast.className = `toast toast-${type}`;
-    
-    let icon = "ℹ️";
-    if (type === "success") icon = "✅";
-    if (type === "error") icon = "⚠️";
-
-    toast.innerHTML = `<span>${icon}</span><span>${escapeHtml(message)}</span>`;
+    toast.className = "toast";
+    toast.textContent = message;
     elements.toastContainer.appendChild(toast);
 
     setTimeout(() => {
         toast.style.opacity = "0";
-        toast.style.transform = "translateX(100%)";
-        toast.style.transition = "all 0.3s";
-        setTimeout(() => toast.remove(), 300);
-    }, 3500);
+        toast.style.transform = "translateY(6px)";
+        toast.style.transition = "all 0.2s";
+        setTimeout(() => toast.remove(), 200);
+    }, 2800);
 }
 
-// Utility: Escape HTML
+// Escape HTML
 function escapeHtml(str) {
     if (!str) return "";
     return String(str)
@@ -736,7 +802,7 @@ function escapeHtml(str) {
         .replace(/'/g, "&#039;");
 }
 
-// Utility: Convert markdown **bold** to <strong>bold</strong>
+// Convert markdown **bold** to <strong>
 function formatMarkdownBold(text) {
     if (!text) return "";
     return text.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");

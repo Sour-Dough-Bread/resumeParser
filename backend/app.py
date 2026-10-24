@@ -15,7 +15,8 @@ from document_parser import extract_text, clean_extracted_text
 from ollama_service import (
     get_installed_models, 
     is_ollama_alive, 
-    parse_and_tailor_resume
+    parse_and_tailor_resume,
+    generate_cover_letter
 )
 from jake_template import generate_jake_latex, generate_jake_markdown
 from sample_data import SAMPLE_RESUME_TEXT, SAMPLE_JOB_DESCRIPTIONS
@@ -40,6 +41,12 @@ class ProcessResumeRequest(BaseModel):
     job_description: Optional[str] = ""
     model: Optional[str] = "gemma4:latest"
     temperature: Optional[float] = 0.2
+
+class CoverLetterRequest(BaseModel):
+    resume_text: str
+    job_description: Optional[str] = ""
+    model: Optional[str] = "gemma4:latest"
+    candidate_data: Optional[Dict[str, Any]] = None
 
 class ExportLatexRequest(BaseModel):
     resume_data: Dict[str, Any]
@@ -128,15 +135,38 @@ async def process_resume_and_jd(payload: ProcessResumeRequest):
         latex_code = generate_jake_latex(parsed_resume)
         markdown_text = generate_jake_markdown(parsed_resume)
         
+        # Generate initial tailored cover letter
+        cover_letter_data = generate_cover_letter(
+            resume_text=payload.resume_text,
+            job_description=payload.job_description or "",
+            model_name=payload.model or "gemma4:latest",
+            candidate_data=parsed_resume
+        )
+
         return {
             "success": True,
             "resume": parsed_resume,
             "latex": latex_code,
             "markdown": markdown_text,
+            "cover_letter": cover_letter_data,
             "ats_analysis": parsed_resume.get("ats_analysis", {})
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Gemma 4 processing error: {str(e)}")
+
+@app.post("/api/cover-letter")
+async def generate_standalone_cover_letter(payload: CoverLetterRequest):
+    """Generate or regenerate tailored cover letter based on resume and JD."""
+    try:
+        data = generate_cover_letter(
+            resume_text=payload.resume_text,
+            job_description=payload.job_description or "",
+            model_name=payload.model or "gemma4:latest",
+            candidate_data=payload.candidate_data
+        )
+        return {"success": True, **data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Cover letter generation failed: {str(e)}")
 
 @app.post("/api/export/latex")
 def export_latex(payload: ExportLatexRequest):

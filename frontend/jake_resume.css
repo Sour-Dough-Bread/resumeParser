@@ -1,4 +1,4 @@
-/* Jake's Resume ATS-Optimized Styling (LaTeX Emulation) */
+/* Jake's Resume & Cover Letter — Minimalist Black & White Typography */
 
 .jake-resume-container {
     background: #ffffff;
@@ -7,21 +7,21 @@
     max-width: 8.5in;
     min-height: 11in;
     margin: 0 auto;
-    padding: 0.5in 0.55in;
+    padding: 0.5in 0.6in;
     box-sizing: border-box;
     font-family: 'Latin Modern Roman', 'Computer Modern Serif', 'Times New Roman', Times, serif;
     font-size: 10pt;
     line-height: 1.25;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 0 0 1px rgba(255, 255, 255, 0.2);
-    border-radius: 4px;
+    border: 1px solid #e4e4e7;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border-radius: 2px;
     position: relative;
-    transition: transform 0.2s ease;
 }
 
 /* Header Section */
 .jake-header {
     text-align: center;
-    margin-bottom: 0.15in;
+    margin-bottom: 0.16in;
 }
 
 .jake-header h1 {
@@ -46,7 +46,7 @@
 }
 
 .jake-contact-line span.sep {
-    color: #888888;
+    color: #999999;
     user-select: none;
 }
 
@@ -56,10 +56,6 @@
     text-underline-offset: 2px;
 }
 
-.jake-contact-line a:hover {
-    color: #4f46e5;
-}
-
 /* Sections */
 .jake-section {
     margin-top: 0.14in;
@@ -67,7 +63,7 @@
 }
 
 .jake-section-title {
-    font-size: 11pt;
+    font-size: 10.5pt;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.6px;
@@ -77,7 +73,7 @@
     margin-bottom: 6px;
 }
 
-/* Subheadings: 2-column layout */
+/* Subheadings */
 .jake-subheading {
     margin-bottom: 6px;
 }
@@ -96,7 +92,7 @@
 .jake-row.sub-row {
     font-style: italic;
     font-size: 9.5pt;
-    color: #333333;
+    color: #222222;
     margin-top: 1px;
 }
 
@@ -122,8 +118,7 @@
     font-size: 9.5pt;
     line-height: 1.32;
     margin-bottom: 2px;
-    color: #1f2937;
-    position: relative;
+    color: #111111;
 }
 
 .jake-bullet-list li strong {
@@ -147,7 +142,7 @@
 .jake-project-tech {
     font-style: italic;
     font-weight: 400;
-    color: #333333;
+    color: #222222;
 }
 
 /* Skills Section */
@@ -161,7 +156,7 @@
     font-size: 9.5pt;
     line-height: 1.35;
     margin-bottom: 3px;
-    color: #1f2937;
+    color: #111111;
 }
 
 .jake-skills-list li strong {
@@ -169,29 +164,91 @@
     color: #000000;
 }
 
-/* Summary paragraph */
+/* Summary text */
 .jake-summary-text {
     font-size: 9.5pt;
     line-height: 1.35;
-    color: #222222;
+    color: #111111;
     margin: 2px 0 4px 0.12in;
+}
+
+/* -------------------------------------------------------------
+ * COVER LETTER STYLING
+ * ------------------------------------------------------------- */
+.cover-letter-canvas {
+    padding: 0.7in 0.8in;
+}
+
+.cl-header {
+    margin-bottom: 24px;
+}
+
+.cl-header h1 {
+    font-size: 20pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+    color: #000000;
+}
+
+.cl-contact-sub {
+    font-size: 9.5pt;
+    color: #444444;
+    border-bottom: 1px solid #111111;
+    padding-bottom: 8px;
+    margin-bottom: 20px;
+}
+
+.cl-date {
+    font-size: 9.5pt;
+    color: #333333;
+    margin-bottom: 18px;
+}
+
+.cl-recipient-block {
+    font-size: 9.5pt;
+    line-height: 1.4;
+    color: #222222;
+    margin-bottom: 20px;
+}
+
+.cl-body {
+    font-size: 10pt;
+    line-height: 1.5;
+    color: #111111;
+}
+
+.cl-body p {
+    margin-bottom: 14px;
+    text-align: justify;
+}
+
+.cl-signoff {
+    margin-top: 24px;
+    font-size: 10pt;
+    line-height: 1.4;
+}
+
+.cl-signoff .name {
+    font-weight: 700;
+    margin-top: 16px;
+    color: #000000;
 }
 
 /* Editable Mode Highlight */
 .editable-active [contenteditable="true"] {
-    outline: 1px dashed rgba(99, 102, 241, 0.4);
-    background: rgba(99, 102, 241, 0.04);
-    border-radius: 2px;
+    outline: 1px dashed #71717a;
+    background: #f4f4f5;
     padding: 1px 2px;
-    transition: background 0.2s;
 }
 
 .editable-active [contenteditable="true"]:focus {
-    outline: 2px solid #6366f1;
-    background: rgba(99, 102, 241, 0.08);
+    outline: 1px solid #000000;
+    background: #ffffff;
 }
 
-/* Print Optimization (for browser PDF export) */
+/* Print Optimization */
 @media print {
     body {
         background: #ffffff !important;
@@ -200,40 +257,40 @@
         padding: 0 !important;
     }
 
-    /* Hide entire UI app chrome, nav, sidebar, analytics */
     .app-header,
-    .left-panel,
-    .preview-toolbar,
-    .tab-navigation,
-    .code-view-container,
-    .action-bar,
-    .toast-container,
-    .ats-analytics-section {
+    .panel-left,
+    .doc-toolbar,
+    .code-panel,
+    .toast-container {
         display: none !important;
     }
 
-    .main-workspace {
+    .workspace-grid {
         display: block !important;
         padding: 0 !important;
         margin: 0 !important;
         width: 100% !important;
     }
 
-    .right-panel {
+    .panel-right {
         width: 100% !important;
         padding: 0 !important;
         margin: 0 !important;
-        overflow: visible !important;
+        background: #ffffff !important;
+    }
+
+    .document-viewport {
+        padding: 0 !important;
     }
 
     .jake-resume-container {
         box-shadow: none !important;
+        border: none !important;
         border-radius: 0 !important;
-        padding: 0.4in 0.45in !important;
+        padding: 0.35in 0.45in !important;
         max-width: 100% !important;
         width: 100% !important;
         min-height: auto !important;
-        page-break-after: auto;
     }
 
     @page {
