@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ResuGemma 4 — ATS Resume Parser & Optimizer</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Main Style -->
+    <link rel="stylesheet" href="style.css">
+    <!-- Jake's Resume Template Style -->
+    <link rel="stylesheet" href="jake_resume.css">
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Top Navigation -->
+        <header class="app-header">
+            <div class="header-left">
+                <div class="brand-logo">
+                    <div class="logo-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                        </svg>
+                    </div>
+                    <div class="brand-text">
+                        <span class="brand-title">ResuGemma<span class="brand-accent">4</span></span>
+                        <span class="brand-subtitle">ATS Resume Parser & Jake's Template Tailor</span>
+                    </div>
+                </div>
+                <div class="badge-pill">
+                    <span class="badge-dot pulse"></span>
+                    <span id="ollamaStatusText">Connecting to Ollama...</span>
+                </div>
+            </div>
+
+            <div class="header-right">
+                <div class="model-badge">
+                    <span class="model-icon">🤖</span>
+                    <span id="activeModelName">gemma4:latest</span>
+                </div>
+                <button id="quickSampleBtn" class="btn btn-secondary btn-sm" title="Load sample resume & job description">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                    </svg>
+                    <span>Load Sample Data</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Workspace: Split View -->
+        <main class="main-workspace">
+            <!-- Left Controls & Input Panel -->
+            <section class="left-panel">
+                <!-- Step 1: Upload / Input Resume -->
+                <div class="card panel-card">
+                    <div class="card-header">
+                        <div class="step-num">1</div>
+                        <h3>Upload Resume</h3>
+                        <div class="tab-pills">
+                            <button id="tabUploadBtn" class="pill-btn active">Upload PDF / DOCX</button>
+                            <button id="tabTextBtn" class="pill-btn">Paste Text</button>
+                        </div>
+                    </div>
+
+                    <div class="card-body">
+                        <!-- Dropzone container -->
+                        <div id="dropzoneArea" class="dropzone">
+                            <input type="file" id="resumeFileInput" accept=".pdf,.docx,.doc,.txt" hidden>
+                            <div class="dropzone-content">
+                                <div class="upload-icon-wrapper">
+                                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="17 8 12 3 7 8"></polyline>
+                                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                                    </svg>
+                                </div>
+                                <div class="drop-text">
+                                    <strong>Click or drag & drop resume file</strong>
+                                    <span>Supports PDF, DOCX, DOC or TXT</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- File info banner (hidden initially) -->
+                        <div id="fileInfoBanner" class="file-info-banner hidden">
+                            <div class="file-info-left">
+                                <div class="file-badge" id="fileTypeBadge">PDF</div>
+                                <div class="file-meta">
+                                    <span id="fileNameText" class="file-name">filename.pdf</span>
+                                    <span id="fileMetaText" class="file-subtext">Pages: 1 | Characters: 2,450</span>
+                                </div>
+                            </div>
+                            <button id="clearFileBtn" class="btn-icon" title="Remove file">✕</button>
+                        </div>
+
+                        <!-- Plain text input area (hidden initially unless clicked) -->
+                        <div id="rawTextInputArea" class="raw-text-wrapper hidden">
+                            <textarea id="resumeRawText" class="custom-textarea" rows="7" placeholder="Paste full resume text here or edit extracted content..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Target Job Description -->
+                <div class="card panel-card">
+                    <div class="card-header">
+                        <div class="step-num">2</div>
+                        <h3>Target Job Description</h3>
+                        <div class="jd-quick-samples">
+                            <span class="sample-label">Quick presets:</span>
+                            <button id="sampleJdAiBtn" class="chip-btn">AI / Full-Stack</button>
+                            <button id="sampleJdBackendBtn" class="chip-btn">Backend Systems</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <textarea id="jobDescriptionText" class="custom-textarea" rows="6" placeholder="Paste the target Job Description (JD) here. Gemma 4 will tailor experience bullet points, align technical skills, and optimize ATS keyword density..."></textarea>
+                    </div>
+                </div>
+
+                <!-- Step 3: Model Settings & Action -->
+                <div class="card panel-card action-card">
+                    <div class="model-settings-row">
+                        <div class="setting-field">
+                            <label for="modelSelect">Ollama Model</label>
+                            <select id="modelSelect" class="custom-select">
+                                <option value="gemma4:latest">gemma4:latest (Detected)</option>
+                            </select>
+                        </div>
+                        <div class="setting-field">
+                            <label for="temperatureSlider">Precision: <span id="tempValue">0.2</span></label>
+                            <input type="range" id="temperatureSlider" min="0" max="1" step="0.1" value="0.2" class="custom-slider">
+                        </div>
+                    </div>
+
+                    <button id="processBtn" class="btn btn-primary btn-glow btn-lg">
+                        <span class="btn-icon-sparkle">✨</span>
+                        <span id="processBtnText">Parse & Tailor with Gemma 4</span>
+                        <div id="processSpinner" class="spinner hidden"></div>
+                    </button>
+
+                    <!-- Live AI Status bar -->
+                    <div id="aiStatusBar" class="ai-status-bar hidden">
+                        <div class="pulse-indicator"></div>
+                        <span id="aiStatusMessage">Gemma 4 is reading resume & matching target job keywords...</span>
+                    </div>
+                </div>
+
+                <!-- Step 4: ATS Scorecard & Analytics (Appears after parse) -->
+                <div id="atsAnalyticsCard" class="card panel-card ats-card hidden">
+                    <div class="card-header">
+                        <div class="step-num success-num">✓</div>
+                        <h3>ATS Match Analysis</h3>
+                        <div id="atsRatingBadge" class="rating-badge">88% Match</div>
+                    </div>
+                    <div class="card-body">
+                        <!-- Score visual meter -->
+                        <div class="score-meter-container">
+                            <div class="score-display">
+                                <span id="atsScoreValue" class="score-number">88</span>
+                                <span class="score-denom">/100</span>
+                            </div>
+                            <div class="score-bar-track">
+                                <div id="atsScoreProgressBar" class="score-bar-fill" style="width: 88%;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Tailoring summary -->
+                        <div class="analytics-block">
+                            <h4>Optimizations Applied</h4>
+                            <p id="atsSummaryText" class="analytics-desc">Tailored bullet points with strong action verbs and quantifiable metrics directly matching the job description.</p>
+                        </div>
+
+                        <!-- Keywords matched -->
+                        <div class="analytics-block">
+                            <h4>Matched Keywords (<span id="matchedCount">0</span>)</h4>
+                            <div id="matchedKeywordsList" class="keywords-wrap">
+                                <span class="kw-tag matched">Python</span>
+                                <span class="kw-tag matched">FastAPI</span>
+                                <span class="kw-tag matched">Docker</span>
+                            </div>
+                        </div>
+
+                        <!-- Missing keywords -->
+                        <div class="analytics-block">
+                            <h4>Recommended Additions (<span id="missingCount">0</span>)</h4>
+                            <div id="missingKeywordsList" class="keywords-wrap">
+                                <span class="kw-tag missing">Kubernetes</span>
+                                <span class="kw-tag missing">GraphQL</span>
+                            </div>
+                        </div>
+
+                        <!-- Tips -->
+                        <div class="analytics-block">
+                            <h4>ATS Recommendations</h4>
+                            <ul id="atsTipsList" class="tips-list">
+                                <li>All bullet points structured to ATS single-column parse specification.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Resume Document & Export Panel -->
+            <section class="right-panel">
+                <!-- Document Toolbar -->
+                <div class="preview-toolbar">
+                    <div class="toolbar-left">
+                        <div class="tab-switcher">
+                            <button id="viewJakeBtn" class="tab-btn active">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                </svg>
+                                <span>Jake's Resume</span>
+                            </button>
+                            <button id="viewLatexBtn" class="tab-btn">
+                                <span>LaTeX (.tex)</span>
+                            </button>
+                            <button id="viewMarkdownBtn" class="tab-btn">
+                                <span>Markdown</span>
+                            </button>
+                            <button id="viewJsonBtn" class="tab-btn">
+                                <span>JSON</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="toolbar-right">
+                        <!-- Inline Edit toggle -->
+                        <button id="toggleEditBtn" class="btn btn-outline btn-sm" title="Click to edit text directly on the resume">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 20h9"></path>
+                                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                            </svg>
+                            <span id="editBtnText">Edit Mode</span>
+                        </button>
+
+                        <!-- Print / PDF -->
+                        <button id="printPdfBtn" class="btn btn-primary btn-sm" title="Print or save as pixel-perfect PDF">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                                <rect x="6" y="14" width="12" height="8"></rect>
+                            </svg>
+                            <span>Print / PDF</span>
+                        </button>
+
+                        <!-- Download LaTeX -->
+                        <button id="downloadLatexBtn" class="btn btn-secondary btn-sm" title="Download authentic Jake's Resume LaTeX source (.tex)">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                            <span>.tex</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Document Paper Canvas / Viewer Area -->
+                <div class="document-viewport">
+                    <!-- 1. Jake's Resume Live HTML View -->
+                    <div id="jakeResumePaper" class="jake-resume-container">
+                        <!-- Populated dynamically via JS -->
+                        <div class="empty-placeholder">
+                            <div class="placeholder-icon">📄</div>
+                            <h3>Jake's Resume Preview</h3>
+                            <p>Upload a resume or click <strong>"Load Sample Data"</strong>, then press <strong>"Parse & Tailor with Gemma 4"</strong> to generate your tailored ATS resume.</p>
+                            <button id="placeholderSampleBtn" class="btn btn-primary btn-sm">Try Sample Now</button>
+                        </div>
+                    </div>
+
+                    <!-- 2. LaTeX Code View -->
+                    <div id="latexCodeView" class="code-container hidden">
+                        <div class="code-header">
+                            <span>jakes_resume.tex (Compilable with Overleaf / pdflatex)</span>
+                            <button id="copyLatexBtn" class="btn-copy">Copy Code</button>
+                        </div>
+                        <pre><code id="latexCodeContent">% Generate resume to view LaTeX code</code></pre>
+                    </div>
+
+                    <!-- 3. Markdown View -->
+                    <div id="markdownCodeView" class="code-container hidden">
+                        <div class="code-header">
+                            <span>resume.md</span>
+                            <button id="copyMdBtn" class="btn-copy">Copy Markdown</button>
+                        </div>
+                        <pre><code id="markdownCodeContent"># Generate resume to view Markdown</code></pre>
+                    </div>
+
+                    <!-- 4. JSON View -->
+                    <div id="jsonCodeView" class="code-container hidden">
+                        <div class="code-header">
+                            <span>Structured ATS Resume JSON</span>
+                            <button id="copyJsonBtn" class="btn-copy">Copy JSON</button>
+                        </div>
+                        <pre><code id="jsonCodeContent">{}</code></pre>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
